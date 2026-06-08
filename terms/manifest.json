@@ -1,0 +1,18 @@
+{
+  "name": "マイ用語帳",
+  "short_name": "用語帳",
+  "description": "最近覚えた用語をまとめておくアプリ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f4ff",
+  "theme_color": "#6c63ff",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

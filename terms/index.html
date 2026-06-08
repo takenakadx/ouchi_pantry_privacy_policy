@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>マイ用語帳</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6c63ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="マイ用語帳">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --p: #6c63ff;
+      --p-dark: #5a52d5;
+      --p-light: #ede9ff;
+      --bg: #f5f4ff;
+      --card: #ffffff;
+      --text: #1a1830;
+      --muted: #6b7280;
+      --border: #e5e4f0;
+      --danger: #ef4444;
+      --success: #059669;
+      --safe-b: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      padding-bottom: calc(64px + var(--safe-b));
+    }
+
+    /* ── Header ── */
+    .hdr {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--p);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 12px rgba(108,99,255,.28);
+    }
+    .hdr h1 { font-size: 17px; font-weight: 700; flex: 1; }
+    .hdr-back {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      line-height: 1;
+    }
+    .hdr-back:hover { background: rgba(255,255,255,.15); }
+
+    /* ── Layout ── */
+    .main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Search ── */
+    .search-wrap { position: relative; margin-bottom: 12px; }
+    .search-ico {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .search-in {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-in:focus { border-color: var(--p); }
+
+    /* ── Chips ── */
+    .chips {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      margin-bottom: 12px;
+      scrollbar-width: none;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      color: var(--muted);
+      font-family: inherit;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .chip.on { background: var(--p); color: #fff; border-color: var(--p); }
+
+    /* ── List meta ── */
+    .list-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+
+    /* ── Term cards ── */
+    .tcard {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      cursor: pointer;
+      transition: box-shadow .15s, transform .1s, border-color .15s;
+      border: 1px solid transparent;
+    }
+    .tcard:active { transform: scale(.99); }
+    .tcard:hover {
+      box-shadow: 0 4px 14px rgba(108,99,255,.12);
+      border-color: var(--p-light);
+    }
+    .tcard-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .tcard-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+    .tag-cat {
+      font-size: 11px; padding: 2px 9px; border-radius: 10px;
+      background: #ecfdf5; color: var(--success); font-weight: 600;
+    }
+    .tag-item {
+      font-size: 11px; padding: 2px 9px; border-radius: 10px;
+      background: var(--p-light); color: var(--p); font-weight: 500;
+    }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 56px 24px; color: var(--muted); }
+    .empty-ico { font-size: 52px; margin-bottom: 16px; }
+    .empty p { font-size: 14px; line-height: 1.8; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(76px + var(--safe-b));
+      right: 16px;
+      background: var(--p);
+      color: #fff;
+      border: none;
+      border-radius: 28px;
+      padding: 14px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(108,99,255,.4);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      z-index: 100;
+      transition: background .15s, transform .1s;
+    }
+    .fab:active { background: var(--p-dark); transform: scale(.97); }
+    .fab.hidden { display: none; }
+
+    /* ── Tab bar ── */
+    .tabbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 200;
+      padding-bottom: var(--safe-b);
+    }
+    .tab {
+      flex: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 10px 4px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-family: inherit;
+      font-size: 10px;
+      color: var(--muted);
+      transition: color .15s;
+    }
+    .tab.on { color: var(--p); }
+    .tab-ico { font-size: 22px; line-height: 1; }
+
+    /* ── Detail ── */
+    .dcard {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .d-term { font-size: 26px; font-weight: 700; margin-bottom: 14px; line-height: 1.3; }
+    .d-desc { font-size: 15px; line-height: 1.8; white-space: pre-wrap; }
+    .d-sec-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted); margin-bottom: 8px;
+    }
+    .d-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+    /* ── Form ── */
+    .fgroup { margin-bottom: 18px; }
+    .flabel {
+      display: block;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted); margin-bottom: 6px;
+    }
+    .finput, .ftextarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .finput:focus, .ftextarea:focus { border-color: var(--p); }
+    .ftextarea { min-height: 130px; resize: vertical; line-height: 1.7; }
+
+    /* ── Buttons ── */
+    .btn-row { display: flex; gap: 10px; }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); opacity: .85; }
+    .btn-pri { background: var(--p); color: #fff; }
+    .btn-sec { background: #f0eff8; color: var(--text); }
+    .btn-del { background: #fee2e2; color: var(--danger); }
+
+    /* ── Quiz ── */
+    .q-controls { display: flex; gap: 8px; margin-bottom: 16px; }
+    .q-select {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+    .q-select:focus { border-color: var(--p); }
+    .q-shuffle {
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .q-shuffle:hover { background: var(--p-light); border-color: var(--p); color: var(--p); }
+
+    .q-progress { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 14px; font-weight: 500; }
+
+    /* Flip card */
+    .q-wrap {
+      perspective: 1200px;
+      height: 250px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .q-card {
+      width: 100%;
+      height: 250px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform .45s cubic-bezier(.4,0,.2,1);
+    }
+    .q-card.flipped { transform: rotateY(180deg); }
+    .q-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .q-front {
+      background: linear-gradient(135deg, var(--p), #9089fc);
+      color: #fff;
+      box-shadow: 0 8px 28px rgba(108,99,255,.28);
+    }
+    .q-back {
+      background: #fff;
+      border: 2px solid var(--p-light);
+      transform: rotateY(180deg);
+      box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .q-word { font-size: 26px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+    .q-hint { font-size: 12px; opacity: .7; }
+    .q-badge {
+      font-size: 11px;
+      background: rgba(255,255,255,.2);
+      padding: 3px 10px;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+    .q-answer {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre-wrap;
+      text-align: left;
+      width: 100%;
+      max-height: 190px;
+      overflow-y: auto;
+    }
+
+    .q-nav { display: flex; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="hdr">
+  <button class="hdr-back" id="hBack" style="display:none" aria-label="戻る">&#8592;</button>
+  <h1 id="hTitle">マイ用語帳</h1>
+</header>
+
+<div class="main">
+
+  <!-- ── List view ── -->
+  <div class="view active" data-view="list">
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input class="search-in" id="searchIn" type="text" placeholder="用語・説明・タグを検索...">
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="list-meta" id="listMeta"></div>
+    <div id="termList"></div>
+  </div>
+
+  <!-- ── Detail view ── -->
+  <div class="view" data-view="detail">
+    <div class="dcard">
+      <div class="d-term" id="dTerm"></div>
+      <div class="d-desc" id="dDesc"></div>
+    </div>
+    <div class="dcard" id="dMetaSec">
+      <div class="d-sec-label">カテゴリ・タグ</div>
+      <div class="tags" id="dMeta"></div>
+    </div>
+    <div class="d-actions">
+      <button class="btn btn-sec" id="dEdit">編集</button>
+      <button class="btn btn-del" id="dDel">削除</button>
+    </div>
+  </div>
+
+  <!-- ── Form view ── -->
+  <div class="view" data-view="form">
+    <div class="fgroup">
+      <label class="flabel" for="fTerm">用語 *</label>
+      <input class="finput" id="fTerm" type="text" placeholder="例：エピソード記憶">
+    </div>
+    <div class="fgroup">
+      <label class="flabel" for="fDesc">説明 *</label>
+      <textarea class="ftextarea" id="fDesc" placeholder="この用語の意味や使い方を書いてください..."></textarea>
+    </div>
+    <div class="fgroup">
+      <label class="flabel" for="fCat">カテゴリ</label>
+      <input class="finput" id="fCat" type="text" placeholder="例：心理学" list="catList" autocomplete="off">
+      <datalist id="catList"></datalist>
+    </div>
+    <div class="fgroup">
+      <label class="flabel" for="fTags">タグ（カンマ区切り）</label>
+      <input class="finput" id="fTags" type="text" placeholder="例：記憶, 認知, 脳科学">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sec" id="fCancel">キャンセル</button>
+      <button class="btn btn-pri" id="fSave">保存</button>
+    </div>
+  </div>
+
+  <!-- ── Quiz view ── -->
+  <div class="view" data-view="quiz">
+    <div class="q-controls">
+      <select class="q-select" id="qCat"></select>
+      <button class="q-shuffle" id="qShuffle">🔀 シャッフル</button>
+    </div>
+    <div class="q-progress" id="qProg"></div>
+    <div class="q-wrap" id="qWrap">
+      <div class="q-card" id="qCard">
+        <div class="q-face q-front">
+          <div class="q-word" id="qWord"></div>
+          <div class="q-hint">タップして答えを確認</div>
+          <div class="q-badge" id="qBadge"></div>
+        </div>
+        <div class="q-face q-back">
+          <div class="q-answer" id="qAnswer"></div>
+        </div>
+      </div>
+    </div>
+    <div class="q-nav">
+      <button class="btn btn-sec" id="qPrev">← 前へ</button>
+      <button class="btn btn-pri" id="qNext">次へ →</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- FAB -->
+<button class="fab" id="fab">＋ 用語を追加</button>
+
+<!-- Tab bar -->
+<nav class="tabbar">
+  <button class="tab on" id="tabList">
+    <span class="tab-ico">📚</span>
+    <span>用語一覧</span>
+  </button>
+  <button class="tab" id="tabQuiz">
+    <span class="tab-ico">🧠</span>
+    <span>復習</span>
+  </button>
+</nav>
+
+<script>
+// ── Storage ──
+const STORE_KEY = 'myterms_v1';
+let terms = [];
+function loadData() {
+  try { terms = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { terms = []; }
+}
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(terms));
+}
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── State ──
+let curView = 'list';
+let filterCat = '';
+let searchQ = '';
+let detailId = null;
+let editId = null;
+
+// Quiz
+let qItems = [], qIdx = 0, qFlipped = false;
+
+// ── Views ──
+function showView(name) {
+  document.querySelectorAll('[data-view]').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === name);
+  });
+  curView = name;
+
+  const titles = { list:'マイ用語帳', detail:'用語詳細', form: editId ? '用語を編集' : '用語を追加', quiz:'復習モード' };
+  document.getElementById('hTitle').textContent = titles[name] || '';
+  document.getElementById('hBack').style.display = ['detail','form'].includes(name) ? 'flex' : 'none';
+  document.getElementById('fab').classList.toggle('hidden', name !== 'list');
+  document.getElementById('tabList').classList.toggle('on', name !== 'quiz');
+  document.getElementById('tabQuiz').classList.toggle('on', name === 'quiz');
+
+  if (name === 'list') renderList();
+  if (name === 'quiz') initQuiz();
+}
+
+// ── List ──
+function cats() {
+  return [...new Set(terms.map(t => t.category).filter(Boolean))].sort();
+}
+
+function filteredTerms() {
+  const q = searchQ.trim().toLowerCase();
+  return terms.filter(t => {
+    if (filterCat && t.category !== filterCat) return false;
+    if (!q) return true;
+    return t.term.toLowerCase().includes(q) ||
+           t.description.toLowerCase().includes(q) ||
+           (t.tags||[]).some(x => x.toLowerCase().includes(q)) ||
+           (t.category||'').toLowerCase().includes(q);
+  });
+}
+
+function renderList() {
+  const cs = cats();
+
+  // chips
+  const chipsEl = document.getElementById('chips');
+  chipsEl.innerHTML = `<button class="chip${!filterCat?' on':''}" data-cat="">すべて</button>` +
+    cs.map(c => `<button class="chip${filterCat===c?' on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+
+  // datalist
+  document.getElementById('catList').innerHTML = cs.map(c => `<option value="${esc(c)}">`).join('');
+
+  const items = filteredTerms();
+  document.getElementById('listMeta').textContent = items.length + '件';
+
+  const listEl = document.getElementById('termList');
+  if (items.length === 0) {
+    listEl.innerHTML = `<div class="empty">
+      <div class="empty-ico">📝</div>
+      <p>${terms.length === 0
+        ? '用語を追加してみましょう！<br>右下のボタンから始められます。'
+        : '該当する用語が見つかりません'}</p>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map(t => `
+    <div class="tcard" data-id="${t.id}">
+      <div class="tcard-name">${esc(t.term)}</div>
+      <div class="tcard-desc">${esc(t.description)}</div>
+      <div class="tags">
+        ${t.category ? `<span class="tag-cat">${esc(t.category)}</span>` : ''}
+        ${(t.tags||[]).map(x=>`<span class="tag-item">${esc(x)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// Event delegation – chips
+document.getElementById('chips').addEventListener('click', e => {
+  const btn = e.target.closest('[data-cat]');
+  if (!btn) return;
+  filterCat = btn.dataset.cat;
+  renderList();
+});
+
+// Event delegation – term list
+document.getElementById('termList').addEventListener('click', e => {
+  const card = e.target.closest('.tcard');
+  if (card) showDetail(card.dataset.id);
+});
+
+// ── Detail ──
+function showDetail(id) {
+  const t = terms.find(x => x.id === id);
+  if (!t) return;
+  detailId = id;
+
+  document.getElementById('dTerm').textContent = t.term;
+  document.getElementById('dDesc').textContent = t.description;
+
+  const tags = [];
+  if (t.category) tags.push(`<span class="tag-cat">${esc(t.category)}</span>`);
+  (t.tags||[]).forEach(x => tags.push(`<span class="tag-item">${esc(x)}</span>`));
+
+  document.getElementById('dMeta').innerHTML = tags.join('');
+  document.getElementById('dMetaSec').style.display = tags.length ? '' : 'none';
+
+  showView('detail');
+}
+
+document.getElementById('dEdit').addEventListener('click', () => {
+  const t = terms.find(x => x.id === detailId);
+  if (!t) return;
+  editId = detailId;
+  document.getElementById('fTerm').value = t.term;
+  document.getElementById('fDesc').value = t.description;
+  document.getElementById('fCat').value = t.category || '';
+  document.getElementById('fTags').value = (t.tags||[]).join(', ');
+  showView('form');
+});
+
+document.getElementById('dDel').addEventListener('click', () => {
+  const t = terms.find(x => x.id === detailId);
+  if (!t || !confirm(`「${t.term}」を削除しますか？`)) return;
+  terms = terms.filter(x => x.id !== detailId);
+  saveData();
+  showView('list');
+});
+
+// ── Form ──
+document.getElementById('fab').addEventListener('click', () => {
+  editId = null;
+  document.getElementById('fTerm').value = '';
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fCat').value = '';
+  document.getElementById('fTags').value = '';
+  showView('form');
+});
+
+document.getElementById('fCancel').addEventListener('click', () => {
+  if (editId) { const id = editId; editId = null; showDetail(id); }
+  else showView('list');
+});
+
+document.getElementById('fSave').addEventListener('click', () => {
+  const term = document.getElementById('fTerm').value.trim();
+  const desc = document.getElementById('fDesc').value.trim();
+  if (!term) { document.getElementById('fTerm').focus(); return; }
+  if (!desc) { document.getElementById('fDesc').focus(); return; }
+
+  const category = document.getElementById('fCat').value.trim();
+  const tags = document.getElementById('fTags').value.split(',').map(s => s.trim()).filter(Boolean);
+
+  if (editId) {
+    const idx = terms.findIndex(x => x.id === editId);
+    terms[idx] = { ...terms[idx], term, description: desc, category, tags, updatedAt: new Date().toISOString() };
+    const id = editId;
+    editId = null;
+    saveData();
+    showDetail(id);
+  } else {
+    terms.unshift({ id: uid(), term, description: desc, category, tags, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    saveData();
+    showView('list');
+  }
+});
+
+// ── Header back ──
+document.getElementById('hBack').addEventListener('click', () => {
+  if (curView === 'detail') showView('list');
+  else if (curView === 'form') document.getElementById('fCancel').click();
+});
+
+// ── Search ──
+document.getElementById('searchIn').addEventListener('input', e => {
+  searchQ = e.target.value;
+  renderList();
+});
+
+// ── Tab bar ──
+document.getElementById('tabList').addEventListener('click', () => { if (curView !== 'quiz') return; showView('list'); });
+document.getElementById('tabQuiz').addEventListener('click', () => { if (curView === 'quiz') return; showView('quiz'); });
+
+// ── Quiz ──
+function initQuiz() {
+  const sel = document.getElementById('qCat');
+  const prev = sel.value;
+  const cs = cats();
+  sel.innerHTML = `<option value="">すべてのカテゴリ</option>` +
+    cs.map(c => `<option value="${esc(c)}"${prev===c?' selected':''}>${esc(c)}</option>`).join('');
+
+  loadQItems();
+  renderQuiz();
+}
+
+function loadQItems() {
+  const cat = document.getElementById('qCat').value;
+  qItems = terms.filter(t => !cat || t.category === cat);
+  qIdx = 0;
+  qFlipped = false;
+}
+
+function renderQuiz() {
+  qFlipped = false;
+  document.getElementById('qCard').classList.remove('flipped');
+
+  if (qItems.length === 0) {
+    document.getElementById('qProg').textContent = '用語がありません';
+    document.getElementById('qWord').textContent = '—';
+    document.getElementById('qAnswer').textContent = terms.length === 0 ? '先に用語を追加してください' : 'このカテゴリに用語がありません';
+    document.getElementById('qBadge').style.display = 'none';
+    return;
+  }
+
+  const item = qItems[qIdx];
+  document.getElementById('qProg').textContent = `${qIdx + 1} / ${qItems.length}`;
+  document.getElementById('qWord').textContent = item.term;
+  document.getElementById('qAnswer').textContent = item.description;
+
+  if (item.category) {
+    document.getElementById('qBadge').textContent = item.category;
+    document.getElementById('qBadge').style.display = '';
+  } else {
+    document.getElementById('qBadge').style.display = 'none';
+  }
+}
+
+function flipQ() {
+  qFlipped = !qFlipped;
+  document.getElementById('qCard').classList.toggle('flipped', qFlipped);
+}
+
+document.getElementById('qWrap').addEventListener('click', flipQ);
+document.getElementById('qCat').addEventListener('change', () => { loadQItems(); renderQuiz(); });
+document.getElementById('qShuffle').addEventListener('click', () => {
+  loadQItems();
+  for (let i = qItems.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [qItems[i], qItems[j]] = [qItems[j], qItems[i]];
+  }
+  renderQuiz();
+});
+document.getElementById('qPrev').addEventListener('click', () => {
+  if (!qItems.length) return;
+  qIdx = (qIdx - 1 + qItems.length) % qItems.length;
+  renderQuiz();
+});
+document.getElementById('qNext').addEventListener('click', () => {
+  if (!qItems.length) return;
+  qIdx = (qIdx + 1) % qItems.length;
+  renderQuiz();
+});
+
+// Keyboard shortcuts (quiz mode)
+document.addEventListener('keydown', e => {
+  if (curView !== 'quiz') return;
+  if (e.key === 'ArrowRight') document.getElementById('qNext').click();
+  else if (e.key === 'ArrowLeft') document.getElementById('qPrev').click();
+  else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipQ(); }
+});
+
+// ── Init ──
+loadData();
+renderList();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
